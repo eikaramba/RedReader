@@ -1663,6 +1663,8 @@
 	<string name="pref_behaviour_collapse_sticky_comments_option_always">Always</string>
 	<string name="pref_behaviour_collapse_sticky_comments_option_only_bots">Only comments by bots</string>
 	<string name="pref_behaviour_collapse_sticky_comments_option_never">Never</string>
+	<string name="pref_behaviour_collapse_gif_only_comments_key">pref_behaviour_collapse_gif_only_comments</string>
+	<string name="pref_behaviour_collapse_gif_only_comments_title">Collapse comments with only GIF links</string>
 
 	<!-- 2022-04-05 -->
 	<string name="pref_accessibility_concise_mode_key">pref_accessibility_concise_mode</string>

@@ -19,6 +19,7 @@ package org.quantumbadger.redreader.reddit.prepared;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.net.Uri;
 import android.text.SpannableStringBuilder;
 import android.view.View;
 
@@ -44,12 +45,21 @@ import org.quantumbadger.redreader.common.time.TimestampUTC;
 import org.quantumbadger.redreader.reddit.api.RedditAPICommentAction;
 import org.quantumbadger.redreader.reddit.kthings.RedditComment;
 import org.quantumbadger.redreader.reddit.kthings.RedditIdAndType;
+import org.quantumbadger.redreader.reddit.kthings.UrlEncodedString;
 import org.quantumbadger.redreader.reddit.things.RedditThingWithIdAndType;
 
 import java.util.Observer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class RedditRenderableComment
 		implements RedditRenderableInboxItem, RedditThingWithIdAndType {
+
+	private static final Pattern URL_ONLY_PATTERN = Pattern.compile(
+			"^\\s*<?(https?://\\S+)>?\\s*$");
+
+	private static final Pattern MARKDOWN_LINK_ONLY_PATTERN = Pattern.compile(
+			"^\\s*\\[[^\\]]*]\\((https?://[^\\s)]+)\\)\\s*$");
 
 	private final RedditParsedComment mComment;
 	@Nullable private final String mParentPostAuthor;
@@ -629,6 +639,79 @@ public class RedditRenderableComment
 		return (computeScore(changeDataManager) < mMinimumCommentScore);
 	}
 
+	private boolean shouldAutoCollapseGifOnlyLinkComment() {
+
+		if(!PrefsUtility.pref_behaviour_collapse_gif_only_comments()) {
+			return false;
+		}
+
+		final UrlEncodedString body = mComment.getRawComment().getBody();
+
+		if(body == null) {
+			return false;
+		}
+
+		final String bodyTrimmed = body.getDecoded().trim();
+
+		if(bodyTrimmed.isEmpty()) {
+			return false;
+		}
+
+		final String singleUrl = extractSingleUrlFromLinkOnlyComment(bodyTrimmed);
+
+		return singleUrl != null && isTargetGifUrl(singleUrl);
+	}
+
+	@Nullable
+	private static String extractSingleUrlFromLinkOnlyComment(final String bodyTrimmed) {
+
+		final Matcher urlOnlyMatcher = URL_ONLY_PATTERN.matcher(bodyTrimmed);
+
+		if(urlOnlyMatcher.matches()) {
+			return urlOnlyMatcher.group(1);
+		}
+
+		final Matcher markdownMatcher = MARKDOWN_LINK_ONLY_PATTERN.matcher(bodyTrimmed);
+
+		if(markdownMatcher.matches()) {
+			return markdownMatcher.group(1);
+		}
+
+		return null;
+	}
+
+	private static boolean isTargetGifUrl(final String url) {
+
+		final Uri uri = Uri.parse(url);
+		final String host = uri.getHost();
+
+		if(host == null) {
+			return false;
+		}
+
+		final String hostLowercase = StringUtils.asciiLowercase(host);
+
+		if(hostLowercase.equals("giphy.com")
+				|| hostLowercase.endsWith(".giphy.com")
+				|| hostLowercase.equals("v.redd.it")) {
+			return true;
+		}
+
+		final String path = uri.getPath();
+		final String pathLowercase = path == null ? "" : StringUtils.asciiLowercase(path);
+
+		if(hostLowercase.equals("i.redd.it")) {
+			return pathLowercase.endsWith(".gif")
+					|| pathLowercase.endsWith(".gifv")
+					|| pathLowercase.endsWith(".mp4");
+		}
+
+		return (hostLowercase.equals("reddit.com")
+				|| hostLowercase.equals("www.reddit.com")
+				|| hostLowercase.equals("old.reddit.com"))
+				&& pathLowercase.contains("/gifs/");
+	}
+
 	public boolean isCollapsed(final RedditChangeDataManager changeDataManager) {
 
 		final Boolean collapsed = changeDataManager.isHidden(getIdAndType());
@@ -671,6 +754,10 @@ public class RedditRenderableComment
 					// Do nothing
 					break;
 			}
+		}
+
+		if(shouldAutoCollapseGifOnlyLinkComment()) {
+			return true;
 		}
 
 		return isScoreBelowThreshold(changeDataManager);

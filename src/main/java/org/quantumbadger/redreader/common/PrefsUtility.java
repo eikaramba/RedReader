@@ -168,6 +168,8 @@ public final class PrefsUtility {
 				|| key.equals(context.getString(
 						R.string.pref_behaviour_collapse_sticky_comments_key))
 				|| key.equals(context.getString(
+						R.string.pref_behaviour_collapse_gif_only_comments_key))
+				|| key.equals(context.getString(
 						R.string.pref_accessibility_concise_mode_key))
 				|| key.equals(context.getString(
 						R.string.pref_appearance_post_hide_subreddit_header_key))
@@ -1859,6 +1861,12 @@ public final class PrefsUtility {
 		return BehaviourCollapseStickyComments.valueOf(StringUtils.asciiUppercase(getString(
 				R.string.pref_behaviour_collapse_sticky_comments_key,
 				"ONLY_BOTS")));
+	}
+
+	public static boolean pref_behaviour_collapse_gif_only_comments() {
+		return getBoolean(
+				R.string.pref_behaviour_collapse_gif_only_comments_key,
+				false);
 	}
 
 	public static boolean pref_accessibility_concise_mode() {
